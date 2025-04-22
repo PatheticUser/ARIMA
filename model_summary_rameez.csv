@@ -1,0 +1,7 @@
+Attempt,Model Type,Data Size,Model Order,RMSE,MAPE,AIC,Comments
+1,ARIMA,2086,"(1,0,0)",—,—,23998,"Weak. No differencing, seasonal pattern ignored."
+2,ARIMA,1500,"(0,1,1)",—,—,17668,"Improved over (1,0,0); captures trend better."
+3,SARIMA,1500,"(1,1,0)(0,0,0)[7]",1162.53,31.81%,17668,"Similar to ARIMA (0,1,1), but with very minor structural change."
+4,SARIMAX,1500,"(0,1,1)(0,1,1)[7]",829.92,21.71%,17629,Great improvement—seasonality captured.
+5,SARIMAX + exog,1500,"(1,0,1)(1,0,1)[7] + exog vars",295.77,7.36%,18230,"Best performance, despite higher AIC; exogenous vars help a lot."
+6,SARIMAX + exog,1200,"(2,0,[1,2])(2,0,[1,2])[7] + exog",259.86,6.51%,16337,Even better; reduced data = less noise + better generalization.
