@@ -8,7 +8,6 @@ import io
 import base64
 import matplotlib.pyplot as plt
 
-# Page configuration
 st.set_page_config(
     page_title="ETH Price Predictor",
     page_icon="📈",
@@ -16,14 +15,12 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-# Custom CSS for styling - Improved visual appeal with light theme
 st.markdown(
     """
 <style>
     /* Modern styling */
     .main-header {
         font-size: 2.5rem;
-        background: linear-gradient(90deg, #3a7bd5, #00d2ff);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
         font-weight: 800;
@@ -32,7 +29,6 @@ st.markdown(
     }
     .sub-header {
         font-size: 1.3rem;
-        color: #555;
         font-weight: 500;
         margin-top: 0;
     }
@@ -43,7 +39,6 @@ st.markdown(
         border-radius: 12px;
         padding: 20px;
         box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
-        border-left: 4px solid #3a7bd5;
         margin-bottom: 15px;
         transition: transform 0.2s;
     }
@@ -64,26 +59,20 @@ st.markdown(
         font-weight: 500;
     }
     .stTabs [aria-selected="true"] {
-        background-color: #f0f7ff;
-        border-bottom: 2px solid #3a7bd5;
     }
     
     /* Risk indicators */
     .risk-low {
-        color: #4CAF50;
         font-weight: bold;
     }
     .risk-medium {
-        color: #FF9800;
         font-weight: bold;
     }
     .risk-high {
-        color: #F44336;
         font-weight: bold;
     }
     
     /* Hide Streamlit branding */
-    #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
 </style>
 """,
@@ -91,18 +80,15 @@ st.markdown(
 )
 
 
-# Create logo
 def create_logo():
     fig, ax = plt.subplots(figsize=(2, 2), dpi=100)
     ax.set_xlim(0, 100)
     ax.set_ylim(0, 100)
 
-    # Draw a stylized ETH logo
     ax.add_patch(
         plt.Polygon(
             [[50, 10], [90, 50], [50, 90], [10, 50]],
             fill=True,
-            color="#3a7bd5",
             alpha=0.8,
         )
     )
@@ -127,7 +113,6 @@ def create_logo():
     return f"data:image/png;base64,{img_str}"
 
 
-# Function to load the model
 @st.cache_resource
 def load_model(model_path):
     try:
@@ -139,7 +124,6 @@ def load_model(model_path):
         return None, f"Error loading model: {str(e)}"
 
 
-# Function to generate sample data
 def generate_sample_data():
     start_date = datetime(2017, 1, 1)
     end_date = datetime.now()
@@ -147,24 +131,18 @@ def generate_sample_data():
 
     n = len(date_range)
 
-    # Base trend
     trend = np.linspace(100, 3000, n)
 
-    # Add market cycles
     cycle1 = 1000 * np.sin(np.linspace(0, 2 * np.pi, n))
     cycle2 = 1500 * np.sin(np.linspace(0, 1.5 * np.pi, n))
 
-    # Weekly seasonality
     weekly = 100 * np.sin(np.linspace(0, 52 * 2 * np.pi, n))
 
-    # Random noise
     noise = np.random.normal(0, 200, n)
 
-    # Combine components
     prices = trend + cycle1 + cycle2 + weekly + noise
     prices = np.maximum(prices, 50)
 
-    # Create DataFrame
     df = pd.DataFrame(
         {
             "Date": date_range,
@@ -173,7 +151,6 @@ def generate_sample_data():
         }
     )
 
-    # Add sentiment
     sentiment = np.sin(np.linspace(0, 8 * np.pi, n)) * 0.7 + np.random.normal(0, 0.3, n)
     sentiment = np.clip(sentiment, -1, 1)
     df["Sentiment"] = sentiment
@@ -182,15 +159,12 @@ def generate_sample_data():
     return df
 
 
-# Function to generate future predictions
 def generate_future_predictions(model, historical_data, days=90, confidence_level=95):
     current_date = datetime.now()
     future_dates = pd.date_range(start=current_date, periods=days, freq="D")
 
-    # If model is available, try to use it for predictions
     if model is not None:
         try:
-            # Check if model requires exogenous variables
             has_exog = (
                 hasattr(model, "exog_names")
                 and model.exog_names is not None
@@ -198,7 +172,6 @@ def generate_future_predictions(model, historical_data, days=90, confidence_leve
             )
 
             if has_exog:
-                # Create dummy exogenous variables
                 exog_count = (
                     len(model.exog_names) if hasattr(model, "exog_names") else 1
                 )
@@ -216,28 +189,21 @@ def generate_future_predictions(model, historical_data, days=90, confidence_leve
             st.warning(f"Using simulated predictions instead: {str(e)}")
             model = None
 
-    # If model is not available or failed, use simulated predictions
     if model is None:
         last_price = historical_data["Price"].iloc[-1]
 
-        # Base trend with slight growth
         trend_factor = 1.0003
         trend = np.array([last_price * (trend_factor**i) for i in range(days)])
 
-        # Add cyclical component
         cycle = 0.2 * trend * np.sin(np.linspace(0, 1.5 * np.pi, days))
 
-        # Add weekly pattern
         weekly = 0.05 * trend * np.sin(np.linspace(0, 52 * 2 * np.pi, days))
 
-        # Add randomness
         time_factor = np.linspace(1, 2, days)
         noise = np.random.normal(0, 0.01 * trend * time_factor)
 
-        # Combine components
         predictions = trend + cycle + weekly + noise
 
-        # Calculate confidence intervals
         z_score = {80: 1.282, 85: 1.440, 90: 1.645, 95: 1.96, 99: 2.576}
         selected_z = z_score.get(confidence_level, 1.96)
 
@@ -245,12 +211,10 @@ def generate_future_predictions(model, historical_data, days=90, confidence_leve
         lower_bound = predictions - selected_z * std_dev
         upper_bound = predictions + selected_z * std_dev
 
-        # Convert to Series with date index
         predictions = pd.Series(predictions, index=future_dates)
         lower_bound = pd.Series(lower_bound, index=future_dates)
         upper_bound = pd.Series(upper_bound, index=future_dates)
 
-    # Create prediction DataFrame
     forecast_df = pd.DataFrame(
         {
             "Predicted_Price": predictions,
@@ -259,11 +223,9 @@ def generate_future_predictions(model, historical_data, days=90, confidence_leve
         }
     )
 
-    # Add simulated volume and sentiment
     n = len(forecast_df)
     forecast_df["Predicted_Volume"] = np.random.uniform(1000000, 10000000, n)
 
-    # Sentiment follows price with some lag
     price_changes = np.diff(np.append([0], predictions)) / predictions
     lagged_sentiment = np.roll(price_changes, 5)
     sentiment = 0.7 * lagged_sentiment + 0.3 * np.random.normal(0, 0.2, n)
@@ -273,23 +235,18 @@ def generate_future_predictions(model, historical_data, days=90, confidence_leve
     return forecast_df
 
 
-# Function to calculate technical indicators
 def calculate_technical_indicators(data):
-    # Determine which price column to use
     price_col = "Price" if "Price" in data.columns else "Predicted_Price"
 
-    # Calculate moving averages
     data["MA_7"] = data[price_col].rolling(window=7).mean()
     data["MA_30"] = data[price_col].rolling(window=30).mean()
 
-    # Calculate RSI
     delta = data[price_col].diff()
     gain = delta.where(delta > 0, 0).rolling(window=14).mean()
     loss = -delta.where(delta < 0, 0).rolling(window=14).mean()
     rs = gain / loss
     data["RSI"] = 100 - (100 / (1 + rs))
 
-    # Calculate MACD
     data["EMA_12"] = data[price_col].ewm(span=12, adjust=False).mean()
     data["EMA_26"] = data[price_col].ewm(span=26, adjust=False).mean()
     data["MACD"] = data["EMA_12"] - data["EMA_26"]
@@ -298,20 +255,16 @@ def calculate_technical_indicators(data):
     return data
 
 
-# Function to generate scenarios
 def generate_scenarios(base_forecast):
     bullish = base_forecast.copy()
     bearish = base_forecast.copy()
 
-    # Bullish scenario: 30% higher by end of period
     growth_factor = np.linspace(1, 1.3, len(bullish))
     bullish["Predicted_Price"] = base_forecast["Predicted_Price"] * growth_factor
 
-    # Bearish scenario: 30% lower by end of period
     decline_factor = np.linspace(1, 0.7, len(bearish))
     bearish["Predicted_Price"] = base_forecast["Predicted_Price"] * decline_factor
 
-    # Adjust confidence intervals
     bullish["Lower_Bound"] = bullish["Predicted_Price"] * 0.85
     bullish["Upper_Bound"] = bullish["Predicted_Price"] * 1.15
 
@@ -321,7 +274,6 @@ def generate_scenarios(base_forecast):
     return {"base": base_forecast, "bullish": bullish, "bearish": bearish}
 
 
-# Function to calculate risk score
 def calculate_risk_score(volatility, trend, sentiment):
     vol_score = min(1, volatility / 0.1)
     trend_score = (trend + 0.1) / 0.2
@@ -333,7 +285,6 @@ def calculate_risk_score(volatility, trend, sentiment):
     return min(100, max(0, risk_score))
 
 
-# Function to get risk category
 def get_risk_category(score):
     if score < 33:
         return "Low", "risk-low"
@@ -343,33 +294,26 @@ def get_risk_category(score):
         return "High", "risk-high"
 
 
-# Function to generate market insights
 def generate_market_insights(historical_data, forecast_data):
     last_price = historical_data["Price"].iloc[-1]
     end_price = forecast_data["Predicted_Price"].iloc[-1]
 
-    # Calculate expected return
     expected_return = (end_price / last_price - 1) * 100
 
-    # Calculate volatility
     daily_returns = historical_data["Price"].pct_change().dropna()
     volatility = daily_returns.std() * np.sqrt(252) * 100
 
-    # Calculate predicted volatility
     forecast_daily_returns = forecast_data["Predicted_Price"].pct_change().dropna()
     forecast_volatility = forecast_daily_returns.std() * np.sqrt(252) * 100
 
-    # Calculate Sharpe ratio
     risk_free_rate = 2.0
     sharpe_ratio = (expected_return - risk_free_rate) / forecast_volatility
 
-    # Calculate maximum drawdown
     cumulative_returns = (1 + forecast_daily_returns).cumprod()
     max_return = cumulative_returns.cummax()
     drawdown = (cumulative_returns / max_return - 1) * 100
     max_drawdown = drawdown.min()
 
-    # Calculate risk score
     recent_volatility = daily_returns.iloc[-30:].std() * np.sqrt(252)
     recent_trend = daily_returns.iloc[-30:].mean() * 30
     recent_sentiment = (
@@ -392,11 +336,8 @@ def generate_market_insights(historical_data, forecast_data):
     }
 
 
-# Main application
 def main():
-    # Sidebar
     with st.sidebar:
-        # Logo and title
         logo_url = create_logo()
         st.markdown(
             f"""
@@ -408,9 +349,6 @@ def main():
             unsafe_allow_html=True,
         )
 
-        st.markdown("### Model Configuration")
-
-        # Load model
         model_path = "Model/sarimax_model.pkl"
         model, error_message = load_model(model_path)
 
@@ -420,26 +358,17 @@ def main():
         else:
             st.success("SARIMAX model loaded successfully!")
 
-        st.markdown("### Prediction Settings")
-
-        # Prediction days slider
         prediction_days = st.slider("Prediction Horizon (Days)", 30, 120, 90)
 
-        # Confidence interval
         confidence_level = st.slider("Confidence Level (%)", 80, 99, 95)
 
-        # Scenario selection
         scenario = st.radio(
             "Market Scenario", ["Base Case", "Bullish", "Bearish"], index=0
         )
 
-        # Chart settings
-        st.markdown("### Chart Settings")
         show_ma = st.checkbox("Show Moving Averages", True)
         show_volume = st.checkbox("Show Volume", False)
 
-        # About section
-        st.markdown("### About")
         st.markdown(
             """
         **ETH Predictor** uses time series modeling to forecast Ethereum prices.
@@ -449,7 +378,6 @@ def main():
         """
         )
 
-    # Main content
     st.markdown(
         '<p class="main-header">Ethereum Price Forecast</p>', unsafe_allow_html=True
     )
@@ -458,24 +386,18 @@ def main():
         unsafe_allow_html=True,
     )
 
-    # Generate sample data
     historical_data = generate_sample_data()
 
-    # Calculate technical indicators for historical data
     historical_data = calculate_technical_indicators(historical_data)
 
-    # Generate future predictions
     forecast_data = generate_future_predictions(
         model, historical_data, days=prediction_days, confidence_level=confidence_level
     )
 
-    # Calculate technical indicators for forecast data
     forecast_data = calculate_technical_indicators(forecast_data)
 
-    # Generate scenarios
     scenarios = generate_scenarios(forecast_data)
 
-    # Select the appropriate scenario
     if scenario == "Bullish":
         forecast_data = scenarios["bullish"]
     elif scenario == "Bearish":
@@ -483,16 +405,13 @@ def main():
     else:
         forecast_data = scenarios["base"]
 
-    # Calculate market insights
     insights = generate_market_insights(historical_data, forecast_data)
 
-    # Main content area with tabs
     tab1, tab2, tab3 = st.tabs(
         ["Price Forecast", "Technical Analysis", "Market Insights"]
     )
 
     with tab1:
-        # Display key metrics
         col1, col2, col3, col4 = st.columns(4)
 
         with col1:
@@ -531,29 +450,23 @@ def main():
             st.metric("Predicted Volatility", f"{volatility:.2f}%")
             st.markdown("</div>", unsafe_allow_html=True)
 
-        # Forecast Chart - Improved visuals
         st.subheader(f"ETH Price Forecast (Next {prediction_days} Days)")
 
-        # Create interactive forecast chart with Plotly
         fig = go.Figure()
 
-        # Historical data (last 90 days)
         historical_end = historical_data.index[-1]
         historical_start = historical_end - timedelta(days=90)
         historical_subset = historical_data.loc[historical_start:historical_end]
 
-        # Add historical data
         fig.add_trace(
             go.Scatter(
                 x=historical_subset.index,
                 y=historical_subset["Price"],
                 mode="lines",
                 name="Historical",
-                line=dict(color="#3a7bd5", width=2),
             )
         )
 
-        # Add a vertical line to separate historical from forecast
         fig.add_shape(
             type="line",
             x0=historical_end,
@@ -563,7 +476,6 @@ def main():
             line=dict(color="gray", width=1, dash="dash"),
         )
 
-        # Add annotation for forecast start
         fig.add_annotation(
             x=historical_end,
             y=forecast_data["Upper_Bound"].max() * 1.05,
@@ -572,18 +484,15 @@ def main():
             yshift=10,
         )
 
-        # Predictions
         fig.add_trace(
             go.Scatter(
                 x=forecast_data.index,
                 y=forecast_data["Predicted_Price"],
                 mode="lines",
                 name="Forecast",
-                line=dict(color="#00d2ff", width=2.5),
             )
         )
 
-        # Confidence interval
         fig.add_trace(
             go.Scatter(
                 x=forecast_data.index.tolist() + forecast_data.index.tolist()[::-1],
@@ -597,7 +506,6 @@ def main():
             )
         )
 
-        # Add Moving Averages if selected
         if show_ma:
             if "MA_7" in historical_subset.columns:
                 fig.add_trace(
@@ -606,7 +514,6 @@ def main():
                         y=historical_subset["MA_7"],
                         mode="lines",
                         name="7-Day MA (Historical)",
-                        line=dict(color="#FF9800", width=1.5, dash="dot"),
                     )
                 )
 
@@ -617,7 +524,6 @@ def main():
                         y=historical_subset["MA_30"],
                         mode="lines",
                         name="30-Day MA (Historical)",
-                        line=dict(color="#F44336", width=1.5, dash="dot"),
                     )
                 )
 
@@ -628,7 +534,6 @@ def main():
                         y=forecast_data["MA_7"],
                         mode="lines",
                         name="7-Day MA (Forecast)",
-                        line=dict(color="#FF9800", width=1.5, dash="dot"),
                     )
                 )
 
@@ -639,11 +544,9 @@ def main():
                         y=forecast_data["MA_30"],
                         mode="lines",
                         name="30-Day MA (Forecast)",
-                        line=dict(color="#F44336", width=1.5, dash="dot"),
                     )
                 )
 
-        # Customize layout - Removed the problematic title
         fig.update_layout(
             height=600,
             hovermode="x unified",
@@ -659,13 +562,11 @@ def main():
 
         st.plotly_chart(fig, use_container_width=True)
 
-        # Add volume chart if selected
         if show_volume:
             st.subheader("Trading Volume")
 
             fig_volume = go.Figure()
 
-            # Historical volume
             fig_volume.add_trace(
                 go.Bar(
                     x=historical_subset.index,
@@ -675,7 +576,6 @@ def main():
                 )
             )
 
-            # Predicted volume
             fig_volume.add_trace(
                 go.Bar(
                     x=forecast_data.index,
@@ -685,7 +585,6 @@ def main():
                 )
             )
 
-            # Customize layout
             fig_volume.update_layout(
                 height=300,
                 xaxis_title="Date",
@@ -696,10 +595,8 @@ def main():
 
             st.plotly_chart(fig_volume, use_container_width=True)
 
-        # Price prediction table with date slider
         st.subheader("Detailed Price Predictions")
 
-        # Create date slider
         selected_date = st.slider(
             "Select Date",
             min_value=forecast_data.index.min().to_pydatetime(),
@@ -708,12 +605,10 @@ def main():
             format="YYYY-MM-DD",
         )
 
-        # Find the closest date in the forecast data
         closest_date = forecast_data.index[
             forecast_data.index.get_indexer([selected_date], method="nearest")[0]
         ]
 
-        # Display the prediction for the selected date
         selected_prediction = forecast_data.loc[closest_date]
 
         col1, col2, col3 = st.columns(3)
@@ -744,10 +639,8 @@ def main():
             )
             st.markdown("</div>", unsafe_allow_html=True)
 
-        # Weekly summary
         st.subheader("Weekly Price Summary")
 
-        # Group by week and calculate statistics
         weekly_summary = forecast_data.resample("W").agg(
             {
                 "Predicted_Price": ["mean", "min", "max", "std"],
@@ -766,14 +659,12 @@ def main():
         ]
         weekly_summary.index = weekly_summary.index.strftime("%b %d, %Y")
 
-        # Format the summary for display
         formatted_summary = weekly_summary.copy()
         for col in formatted_summary.columns:
             formatted_summary[col] = formatted_summary[col].map("${:.2f}".format)
 
         st.dataframe(formatted_summary, use_container_width=True)
 
-        # Download forecast as CSV
         csv = forecast_data.to_csv()
         st.download_button(
             label="Download Complete Forecast Data",
@@ -783,27 +674,22 @@ def main():
         )
 
     with tab2:
-        # Technical indicators
         col1, col2 = st.columns(2)
 
         with col1:
-            # RSI Chart
             st.subheader("Relative Strength Index (RSI)")
 
             fig = go.Figure()
 
-            # Add RSI line
             fig.add_trace(
                 go.Scatter(
                     x=forecast_data.index,
                     y=forecast_data["RSI"],
                     mode="lines",
                     name="RSI",
-                    line=dict(color="#3a7bd5", width=2),
                 )
             )
 
-            # Add overbought/oversold lines
             fig.add_shape(
                 type="line",
                 x0=forecast_data.index[0],
@@ -822,7 +708,6 @@ def main():
                 line=dict(color="green", width=1, dash="dash"),
             )
 
-            # Add annotations
             fig.add_annotation(
                 x=forecast_data.index[0],
                 y=70,
@@ -841,7 +726,6 @@ def main():
                 font=dict(size=10, color="green"),
             )
 
-            # Update layout
             fig.update_layout(
                 height=300,
                 xaxis_title="Date",
@@ -854,34 +738,28 @@ def main():
             st.plotly_chart(fig, use_container_width=True)
 
         with col2:
-            # MACD Chart
             st.subheader("MACD Indicator")
 
             fig = go.Figure()
 
-            # Add MACD line
             fig.add_trace(
                 go.Scatter(
                     x=forecast_data.index,
                     y=forecast_data["MACD"],
                     mode="lines",
                     name="MACD",
-                    line=dict(color="#3a7bd5", width=2),
                 )
             )
 
-            # Add Signal line
             fig.add_trace(
                 go.Scatter(
                     x=forecast_data.index,
                     y=forecast_data["MACD_Signal"],
                     mode="lines",
                     name="Signal",
-                    line=dict(color="#FF9800", width=1.5),
                 )
             )
 
-            # Add Histogram for MACD - Signal
             histogram_y = forecast_data["MACD"] - forecast_data["MACD_Signal"]
             colors = ["green" if val >= 0 else "red" for val in histogram_y]
 
@@ -894,7 +772,6 @@ def main():
                 )
             )
 
-            # Update layout
             fig.update_layout(
                 height=300,
                 xaxis_title="Date",
@@ -905,18 +782,14 @@ def main():
 
             st.plotly_chart(fig, use_container_width=True)
 
-        # Support and Resistance Levels
         st.subheader("Support and Resistance Levels")
 
-        # Calculate support and resistance (simplified method)
         prices = forecast_data["Predicted_Price"].values
 
-        # Find local minima and maxima
         support_levels = []
         resistance_levels = []
 
         for i in range(2, len(prices) - 2):
-            # Check for local minimum (support)
             if (
                 prices[i - 2]
                 > prices[i - 1]
@@ -926,7 +799,6 @@ def main():
             ):
                 support_levels.append(prices[i])
 
-            # Check for local maximum (resistance)
             if (
                 prices[i - 2]
                 < prices[i - 1]
@@ -936,7 +808,6 @@ def main():
             ):
                 resistance_levels.append(prices[i])
 
-        # Get the most significant levels (top 3)
         support_levels = sorted(set([round(level, 2) for level in support_levels]))[:3]
         resistance_levels = sorted(
             set([round(level, 2) for level in resistance_levels]), reverse=True
@@ -946,27 +817,22 @@ def main():
 
         with col1:
             st.markdown('<div class="metric-card">', unsafe_allow_html=True)
-            st.markdown("#### Support Levels")
             for i, level in enumerate(support_levels):
                 st.markdown(f"**S{i+1}:** ${level:.2f}")
             st.markdown("</div>", unsafe_allow_html=True)
 
         with col2:
             st.markdown('<div class="metric-card">', unsafe_allow_html=True)
-            st.markdown("#### Resistance Levels")
             for i, level in enumerate(resistance_levels):
                 st.markdown(f"**R{i+1}:** ${level:.2f}")
             st.markdown("</div>", unsafe_allow_html=True)
 
     with tab3:
-        # Risk assessment
         col1, col2 = st.columns(2)
 
         with col1:
             st.markdown('<div class="metric-card">', unsafe_allow_html=True)
-            st.markdown("### Risk Assessment")
 
-            # Create risk gauge
             fig = go.Figure(
                 go.Indicator(
                     mode="gauge+number",
@@ -974,14 +840,12 @@ def main():
                     title={"text": "Risk Score"},
                     gauge={
                         "axis": {"range": [0, 100], "tickwidth": 1},
-                        "bar": {"color": "#3a7bd5"},
                         "steps": [
                             {"range": [0, 33], "color": "rgba(76, 175, 80, 0.3)"},
                             {"range": [33, 66], "color": "rgba(255, 152, 0, 0.3)"},
                             {"range": [66, 100], "color": "rgba(244, 67, 54, 0.3)"},
                         ],
                         "threshold": {
-                            "line": {"color": "#00d2ff", "width": 4},
                             "thickness": 0.75,
                             "value": insights["risk_score"],
                         },
@@ -1001,7 +865,6 @@ def main():
 
         with col2:
             st.markdown('<div class="metric-card">', unsafe_allow_html=True)
-            st.markdown("### Key Performance Metrics")
 
             st.markdown(f"**Expected Return:** {insights['expected_return']:.2f}%")
             st.markdown(f"**Volatility (Historical):** {insights['volatility']:.2f}%")
@@ -1013,23 +876,19 @@ def main():
 
             st.markdown("</div>", unsafe_allow_html=True)
 
-        # Market sentiment analysis
         st.subheader("Market Sentiment Analysis")
 
         fig = go.Figure()
 
-        # Add sentiment line
         fig.add_trace(
             go.Scatter(
                 x=forecast_data.index,
                 y=forecast_data["Predicted_Sentiment"],
                 mode="lines",
                 name="Sentiment",
-                line=dict(color="#3a7bd5", width=2),
             )
         )
 
-        # Add zero line
         fig.add_shape(
             type="line",
             x0=forecast_data.index[0],
@@ -1039,7 +898,6 @@ def main():
             line=dict(color="black", width=1, dash="dash"),
         )
 
-        # Add positive/negative regions
         fig.add_trace(
             go.Scatter(
                 x=forecast_data.index,
@@ -1051,7 +909,6 @@ def main():
             )
         )
 
-        # Update layout
         fig.update_layout(
             height=400,
             xaxis_title="Date",
@@ -1063,46 +920,37 @@ def main():
 
         st.plotly_chart(fig, use_container_width=True)
 
-        # Scenario comparison
         st.subheader("Scenario Comparison")
 
-        # Create scenario comparison chart
         fig = go.Figure()
 
-        # Base scenario
         fig.add_trace(
             go.Scatter(
                 x=scenarios["base"].index,
                 y=scenarios["base"]["Predicted_Price"],
                 mode="lines",
                 name="Base Case",
-                line=dict(color="#3a7bd5", width=2.5),
             )
         )
 
-        # Bullish scenario
         fig.add_trace(
             go.Scatter(
                 x=scenarios["bullish"].index,
                 y=scenarios["bullish"]["Predicted_Price"],
                 mode="lines",
                 name="Bullish",
-                line=dict(color="#4CAF50", width=2),
             )
         )
 
-        # Bearish scenario
         fig.add_trace(
             go.Scatter(
                 x=scenarios["bearish"].index,
                 y=scenarios["bearish"]["Predicted_Price"],
                 mode="lines",
                 name="Bearish",
-                line=dict(color="#F44336", width=2),
             )
         )
 
-        # Update layout
         fig.update_layout(
             height=400,
             xaxis_title="Date",
@@ -1114,6 +962,5 @@ def main():
         st.plotly_chart(fig, use_container_width=True)
 
 
-# Run the app
 if __name__ == "__main__":
     main()
